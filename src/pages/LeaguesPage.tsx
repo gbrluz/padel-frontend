@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Medal, Users, Trophy, TrendingUp, UserPlus, Clock, Check, Loader2, Shield, CheckCircle, XCircle, Trash2, Calendar, CalendarCheck, RotateCcw, AlertTriangle, Shuffle, Beef, Pencil, X } from 'lucide-react';
+import { Medal, Users, Trophy, TrendingUp, UserPlus, Clock, Check, Loader2, Shield, CheckCircle, XCircle, Trash2, Calendar, CalendarCheck, RotateCcw, AlertTriangle, Shuffle, Beef, Pencil, X, HelpCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { Player as Profile } from '../types';
+import { Player as Profile } from 'climb-types';
 import { useAuth } from '../contexts/AuthContext';
 import { leagueService } from '../services/leagueService';
 
@@ -956,6 +956,22 @@ const shouldShowScoringCard = (league: League): boolean => {
   return now >= scoringStart && now < scoringEnd;
 };
 
+const shouldShowEventLists = (league: League): boolean => {
+  if (league.format !== 'weekly') return false;
+
+  const deadline = getAttendanceDeadline(league);
+  if (!deadline) return false;
+
+  const now = Date.now();
+  const lastEvent = getLastEventDate(league);
+
+  if (!lastEvent) return false;
+
+  const scoringEnd = lastEvent.getTime() + (48 * 60 * 60 * 1000);
+
+  return now >= deadline.getTime() && now < scoringEnd;
+};
+
   const loadWeeklyScore = async () => {
     if (!profile || !selectedLeague) return;
 
@@ -1900,6 +1916,82 @@ const shouldShowScoringCard = (league: League): boolean => {
                     </div>
                   )}
 
+                  {myLeagues.includes(selectedLeague.id) && shouldShowEventLists(selectedLeague) && (
+                    <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-6">
+                      <div className="flex items-start gap-3">
+                        <Users className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="font-semibold text-blue-900">
+                            Listas do Evento
+                          </p>
+                          <p className="text-sm text-blue-700 mt-1">
+                            {getLastEventDate(selectedLeague)?.toLocaleDateString('pt-BR')}
+                          </p>
+
+                          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="bg-white rounded-lg p-3 border border-blue-200">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="w-4 h-4 rounded-full bg-gradient-to-br from-yellow-300 to-yellow-500 border border-yellow-600 shadow-sm inline-block flex-shrink-0" />
+                                <p className="font-medium text-blue-900 text-sm">Jogadores Confirmados</p>
+                              </div>
+                              <div className="space-y-1 max-h-48 overflow-y-auto">
+                                {Object.entries(lastEventAttendances)
+                                  .filter(([_, att]) => att.status === 'confirmed' || att.status === 'play_and_bbq')
+                                  .map(([playerId, _]) => {
+                                    const playerData = leagueRankings.find(r => r.player_id === playerId)?.player;
+                                    return playerData ? (
+                                      <p key={playerId} className="text-sm text-gray-700">
+                                        {playerData.full_name}
+                                      </p>
+                                    ) : null;
+                                  })}
+                                {Object.entries(lastEventAttendances)
+                                  .filter(([_, att]) => att.status === 'confirmed' || att.status === 'play_and_bbq')
+                                  .length === 0 && (
+                                  <p className="text-xs text-gray-500 italic">Nenhum jogador confirmado</p>
+                                )}
+                              </div>
+                              <p className="text-xs text-blue-600 mt-2 font-medium">
+                                Total: {Object.entries(lastEventAttendances)
+                                  .filter(([_, att]) => att.status === 'confirmed' || att.status === 'play_and_bbq')
+                                  .length} jogador(es)
+                              </p>
+                            </div>
+
+                            <div className="bg-white rounded-lg p-3 border border-amber-200">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Beef className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                                <p className="font-medium text-amber-900 text-sm">Churrasco Confirmado</p>
+                              </div>
+                              <div className="space-y-1 max-h-48 overflow-y-auto">
+                                {Object.entries(lastEventAttendances)
+                                  .filter(([_, att]) => att.status === 'bbq_only' || att.status === 'play_and_bbq')
+                                  .map(([playerId, _]) => {
+                                    const playerData = leagueRankings.find(r => r.player_id === playerId)?.player;
+                                    return playerData ? (
+                                      <p key={playerId} className="text-sm text-gray-700">
+                                        {playerData.full_name}
+                                      </p>
+                                    ) : null;
+                                  })}
+                                {Object.entries(lastEventAttendances)
+                                  .filter(([_, att]) => att.status === 'bbq_only' || att.status === 'play_and_bbq')
+                                  .length === 0 && (
+                                  <p className="text-xs text-gray-500 italic">Nenhuma confirmacao</p>
+                                )}
+                              </div>
+                              <p className="text-xs text-amber-600 mt-2 font-medium">
+                                Total: {Object.entries(lastEventAttendances)
+                                  .filter(([_, att]) => att.status === 'bbq_only' || att.status === 'play_and_bbq')
+                                  .length} pessoa(s)
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {shouldShowScoringCard(selectedLeague) && myLastEventAttendance?.status === 'bbq_only' && (
                     <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 mb-6">
                       <div className="flex items-start gap-3">
@@ -2283,16 +2375,26 @@ const shouldShowScoringCard = (league: League): boolean => {
                                           {ranking.player.full_name}
                                           {isMe && ' (Voce)'}
                                         </p>
-                                        {(willPlay || willBbq) && (
-                                          <div className="flex items-center gap-0.5 flex-shrink-0" title={
-                                            inScoringWindow
-                                              ? (willPlay && willBbq ? 'Jogou e participou do churrasco' :
-                                                 willPlay ? 'Jogou' : 'Participou do churrasco')
-                                              : (willPlay && willBbq ? 'Vai jogar e participar do churrasco' :
-                                                 willPlay ? 'Vai apenas jogar' : 'Vai apenas ao churrasco')
-                                          }>
-                                            {willPlay && <span className="w-3.5 h-3.5 rounded-full bg-gradient-to-br from-yellow-300 to-yellow-500 border border-yellow-600 shadow-sm inline-block" />}
-                                            {willBbq && <Beef className="w-3.5 h-3.5 text-amber-600" />}
+                                        {selectedLeague?.format === 'weekly' && (
+                                          <div className="flex items-center gap-0.5 flex-shrink-0">
+                                            {(willPlay || willBbq) && (
+                                              <div className="flex items-center gap-0.5" title={
+                                                inScoringWindow
+                                                  ? (willPlay && willBbq ? 'Jogou e participou do churrasco' :
+                                                     willPlay ? 'Jogou' : 'Participou do churrasco')
+                                                  : (willPlay && willBbq ? 'Vai jogar e participar do churrasco' :
+                                                     willPlay ? 'Vai apenas jogar' : 'Vai apenas ao churrasco')
+                                              }>
+                                                {willPlay && <span className="w-3.5 h-3.5 rounded-full bg-gradient-to-br from-yellow-300 to-yellow-500 border border-yellow-600 shadow-sm inline-block" />}
+                                                {willBbq && <Beef className="w-3.5 h-3.5 text-amber-600" />}
+                                              </div>
+                                            )}
+                                            {attendanceStatus === 'declined' && (
+                                              <X className="w-3.5 h-3.5 text-red-600" title="Nao vai participar" />
+                                            )}
+                                            {(attendanceStatus === 'no_response' || !attendanceStatus) && (
+                                              <HelpCircle className="w-3.5 h-3.5 text-gray-400" title="Ainda nao respondeu" />
+                                            )}
                                           </div>
                                         )}
                                         {inScoringWindow && hasConfirmedAttendance && (

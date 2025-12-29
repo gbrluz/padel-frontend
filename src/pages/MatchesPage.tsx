@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Users, CheckCircle, XCircle, Clock, Trophy, ThumbsUp, ThumbsDown, ArrowLeft, ArrowRight, FileText, CalendarCheck, TrendingUp, TrendingDown, Crown, AlertTriangle, MapPin } from 'lucide-react';
 import { supabase, Match } from '../lib/supabase';
-import { Player as Profile } from '../types';
+import { Player as Profile } from 'climb-types';
 import { useAuth } from '../contexts/AuthContext';
 import ReportMatchResultModal from '../components/ReportMatchResultModal';
 import { MatchSchedulingModal } from '../components/MatchSchedulingModal';
@@ -540,7 +540,7 @@ export default function MatchesPage() {
             >
               <div className="flex items-center justify-center">
                 <Users className="w-4 h-4 md:w-5 md:h-5 mr-1.5 md:mr-2" />
-                <span className="hidden md:inline">Minhas </span>Partidas
+                <span className="hidden md:inline">Minhas partidas</span>
               </div>
             </button>
             <button
@@ -553,7 +553,7 @@ export default function MatchesPage() {
             >
               <div className="flex items-center justify-center">
                 <Calendar className="w-4 h-4 md:w-5 md:h-5 mr-1.5 md:mr-2" />
-                <span className="hidden md:inline">Todas as </span>Todas
+                <span className="hidden md:inline">Todas as partidas</span>
               </div>
             </button>
           </div>

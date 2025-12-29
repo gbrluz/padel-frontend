@@ -19,11 +19,15 @@ function AppContent() {
   const previousPlayerRef = useRef<typeof player>(null);
 
   useEffect(() => {
+    if (!loading && !player) {
+    localStorage.clear();
+    }
+
     if (player && !previousPlayerRef.current) {
       setCurrentPage('dashboard');
     }
     previousPlayerRef.current = player;
-  }, [player]);
+  }, [player,loading]);
 
   if (loading) {
     return (

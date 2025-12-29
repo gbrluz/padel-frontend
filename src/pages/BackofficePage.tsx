@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Users, UserCog, Trophy, Calendar, Trash2, Save, X, Edit, Medal } from 'lucide-react';
-import { supabase, Profile } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
+import { Player as Profile } from 'climb-types';
+
 import LeaguesManagement from '../components/LeaguesManagement';
 
 interface BackofficePageProps {
