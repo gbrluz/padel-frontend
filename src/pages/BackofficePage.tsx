@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Users, UserCog, Trophy, Calendar, Trash2, Save, X, Edit, Medal } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { Player as Profile } from 'climb-types';
+import { Player } from 'climb-types';
 
 import LeaguesManagement from '../components/LeaguesManagement';
 
@@ -9,7 +9,7 @@ interface BackofficePageProps {
   onNavigate: (page: string) => void;
 }
 
-interface ProfileWithEmail extends Profile {
+interface PlayerWithEmail extends Player {
   email: string;
 }
 
@@ -29,19 +29,19 @@ interface Match {
   has_tiebreak: boolean;
   tiebreak_score: any;
   winner_team: string | null;
-  team_a_player1: Profile;
-  team_a_player2: Profile;
-  team_b_player1: Profile;
-  team_b_player2: Profile;
+  team_a_player1: Player;
+  team_a_player2: Player;
+  team_b_player1: Player;
+  team_b_player2: Player;
 }
 
 export default function BackofficePage({ onNavigate }: BackofficePageProps) {
-  const [profiles, setProfiles] = useState<ProfileWithEmail[]>([]);
+  const [Players, setPlayers] = useState<PlayerWithEmail[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'profiles' | 'matches' | 'leagues'>('profiles');
-  const [editingProfile, setEditingProfile] = useState<ProfileWithEmail | null>(null);
-  const [formData, setFormData] = useState<Partial<ProfileWithEmail>>({});
+  const [activeTab, setActiveTab] = useState<'Players' | 'matches' | 'leagues'>('Players');
+  const [editingPlayer, setEditingPlayer] = useState<PlayerWithEmail | null>(null);
+  const [formData, setFormData] = useState<Partial<PlayerWithEmail>>({});
   const [editingMatch, setEditingMatch] = useState<Match | null>(null);
   const [matchFormData, setMatchFormData] = useState<Partial<Match>>({});
 
@@ -56,21 +56,21 @@ export default function BackofficePage({ onNavigate }: BackofficePageProps) {
     }
 
     setLoading(true);
-    if (activeTab === 'profiles') {
-      await loadProfiles();
+    if (activeTab === 'Players') {
+      await loadPlayers();
     } else {
       await loadMatches();
     }
     setLoading(false);
   };
 
-  const loadProfiles = async () => {
+  const loadPlayers = async () => {
     const { data, error } = await supabase.rpc('get_players_with_email');
 
     if (!error && data) {
-      setProfiles(data);
+      setPlayers(data);
     } else if (error) {
-      console.error('Error loading profiles:', error);
+      console.error('Error loading Players:', error);
     }
   };
 
@@ -91,18 +91,18 @@ export default function BackofficePage({ onNavigate }: BackofficePageProps) {
     }
   };
 
-  const handleEditProfile = (profile: Profile) => {
-    setEditingProfile(profile);
-    setFormData(profile);
+  const handleEditPlayer = (Player: Player) => {
+    setEditingPlayer(Player);
+    setFormData(Player);
   };
 
   const handleCancelEdit = () => {
-    setEditingProfile(null);
+    setEditingPlayer(null);
     setFormData({});
   };
 
-  const handleSaveProfile = async () => {
-    if (!editingProfile) return;
+  const handleSavePlayer = async () => {
+    if (!editingPlayer) return;
 
     const { error } = await supabase
       .from('players')
@@ -120,15 +120,15 @@ export default function BackofficePage({ onNavigate }: BackofficePageProps) {
         win_rate: formData.win_rate,
         is_admin: formData.is_admin,
       })
-      .eq('id', editingProfile.id);
+      .eq('id', editingPlayer.id);
 
     if (!error) {
-      await loadProfiles();
+      await loadPlayers();
       handleCancelEdit();
     }
   };
 
-  const handleDeleteProfile = async (profileId: string) => {
+  const handleDeletePlayer = async (PlayerId: string) => {
     if (!confirm('Tem certeza que deseja excluir este perfil? Esta ação não pode ser desfeita.')) {
       return;
     }
@@ -136,10 +136,10 @@ export default function BackofficePage({ onNavigate }: BackofficePageProps) {
     const { error } = await supabase
       .from('players')
       .delete()
-      .eq('id', profileId);
+      .eq('id', PlayerId);
 
     if (!error) {
-      await loadProfiles();
+      await loadPlayers();
     }
   };
 
@@ -217,9 +217,9 @@ export default function BackofficePage({ onNavigate }: BackofficePageProps) {
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           <div className="flex border-b border-gray-200 overflow-x-auto scrollbar-hide">
             <button
-              onClick={() => setActiveTab('profiles')}
+              onClick={() => setActiveTab('Players')}
               className={`flex-1 min-w-[100px] px-3 md:px-6 py-3 md:py-4 text-center font-semibold transition-colors flex items-center justify-center text-sm md:text-base ${
-                activeTab === 'profiles'
+                activeTab === 'Players'
                   ? 'bg-emerald-500 text-white'
                   : 'bg-white text-gray-600 hover:bg-gray-50'
               }`}
@@ -258,18 +258,18 @@ export default function BackofficePage({ onNavigate }: BackofficePageProps) {
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-200 border-t-emerald-500"></div>
                 <p className="mt-4 text-gray-600">Carregando dados...</p>
               </div>
-            ) : activeTab === 'profiles' ? (
+            ) : activeTab === 'Players' ? (
               <div>
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-xl font-bold text-gray-900">
-                    Total de Usuários: {profiles.length}
+                    Total de Usuários: {Players.length}
                   </h2>
                 </div>
 
-                {editingProfile ? (
+                {editingPlayer ? (
                   <div className="bg-slate-50 rounded-lg p-6 mb-6">
                     <h3 className="text-lg font-bold text-gray-900 mb-4">
-                      Editando: {editingProfile.full_name}
+                      Editando: {editingPlayer.full_name}
                     </h3>
                     <div className="grid md:grid-cols-2 gap-4">
                       <div>
@@ -289,7 +289,7 @@ export default function BackofficePage({ onNavigate }: BackofficePageProps) {
                         </label>
                         <select
                           value={formData.gender || ''}
-                          onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                          onChange={(e) => setFormData({ ...formData, gender: e.target.value as Player['gender'] })}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                         >
                           <option value="male">Masculino</option>
@@ -302,7 +302,7 @@ export default function BackofficePage({ onNavigate }: BackofficePageProps) {
                         </label>
                         <select
                           value={formData.preferred_side || ''}
-                          onChange={(e) => setFormData({ ...formData, preferred_side: e.target.value })}
+                          onChange={(e) => setFormData({ ...formData, preferred_side: e.target.value as Player['preferred_side'] })}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                         >
                           <option value="left">Esquerda</option>
@@ -317,7 +317,7 @@ export default function BackofficePage({ onNavigate }: BackofficePageProps) {
                         <input
                           type="text"
                           value={formData.category || ''}
-                          onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                          onChange={(e) => setFormData({ ...formData, category: e.target.value as Player['category'] })}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                         />
                       </div>
@@ -370,7 +370,7 @@ export default function BackofficePage({ onNavigate }: BackofficePageProps) {
                     </div>
                     <div className="flex gap-3 mt-6">
                       <button
-                        onClick={handleSaveProfile}
+                        onClick={handleSavePlayer}
                         className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center"
                       >
                         <Save className="w-4 h-4 mr-2" />
@@ -401,20 +401,20 @@ export default function BackofficePage({ onNavigate }: BackofficePageProps) {
                       </tr>
                     </thead>
                     <tbody>
-                      {profiles.map((profile) => (
-                        <tr key={profile.id} className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm text-gray-900">{profile.full_name}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{profile.email}</td>
+                      {Players.map((Player) => (
+                        <tr key={Player.id} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm text-gray-900">{Player.full_name}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{Player.email}</td>
                           <td className="px-4 py-3 text-sm">
                             <span className="inline-flex items-center">
                               <Trophy className="w-4 h-4 mr-1 text-yellow-500" />
-                              {profile.ranking_points}
+                              {Player.ranking_points}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{profile.total_matches}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{profile.total_wins}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{Player.total_matches}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{Player.total_wins}</td>
                           <td className="px-4 py-3 text-sm">
-                            {profile.is_admin ? (
+                            {Player.is_admin ? (
                               <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-semibold">
                                 Sim
                               </span>
@@ -427,13 +427,13 @@ export default function BackofficePage({ onNavigate }: BackofficePageProps) {
                           <td className="px-4 py-3 text-sm">
                             <div className="flex gap-2">
                               <button
-                                onClick={() => handleEditProfile(profile)}
+                                onClick={() => handleEditPlayer(Player)}
                                 className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors text-xs"
                               >
                                 Editar
                               </button>
                               <button
-                                onClick={() => handleDeleteProfile(profile.id)}
+                                onClick={() => handleDeletePlayer(Player.id)}
                                 className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors text-xs flex items-center"
                               >
                                 <Trash2 className="w-3 h-3" />

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Medal, Users, Trophy, TrendingUp, UserPlus, Clock, Check, Loader2, Shield, CheckCircle, XCircle, Trash2, Calendar, CalendarCheck, RotateCcw, AlertTriangle, Shuffle, Beef, Pencil, X, HelpCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { Player as Profile } from 'climb-types';
+import { Player as Profile } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { leagueService } from '../services/leagueService';
 
@@ -1103,6 +1103,16 @@ const shouldShowEventLists = (league: League): boolean => {
         weeklyEvent = newEvent;
       }
 
+      if (!weeklyEvent) {
+        alert('Nao foi possivel criar o evento semanal');
+        return;
+      }
+
+      if (!weeklyEvent) {
+        alert('Nao foi possivel criar o evento semanal');
+        return;
+      }
+
       const { error } = await supabase
         .from('weekly_event_attendance')
         .upsert({
@@ -1192,7 +1202,7 @@ const shouldShowEventLists = (league: League): boolean => {
       const { error } = await supabase
         .from('weekly_event_attendance')
         .upsert({
-          event_id: weeklyEvent.id,
+          event_id: weeklyEvent!.id,
           player_id: profile.id,
           confirmed: true,
           confirmed_at: new Date().toISOString(),
@@ -1259,7 +1269,7 @@ const shouldShowEventLists = (league: League): boolean => {
       const { error } = await supabase
         .from('weekly_event_attendance')
         .upsert({
-          event_id: weeklyEvent.id,
+          event_id: weeklyEvent!.id,
           player_id: profile.id,
           confirmed: true,
           confirmed_at: new Date().toISOString(),
@@ -1361,9 +1371,9 @@ const shouldShowEventLists = (league: League): boolean => {
       const combinedRankings = (members || []).map(member => {
         const stats = statsMap.get(member.player_id) || { points: 0, wins: 0, losses: 0, blowouts: 0 };
         const matchesPlayed = stats.wins + stats.losses;
+        const playerData = Array.isArray(member.player) ? member.player[0] : member.player;
         return {
           player_id: member.player_id,
-          league_id: leagueId,
           points: stats.points,
           matches_played: matchesPlayed,
           wins: stats.wins,
@@ -1371,14 +1381,16 @@ const shouldShowEventLists = (league: League): boolean => {
           win_rate: matchesPlayed > 0 ? (stats.wins / matchesPlayed) * 100 : 0,
           blowouts: stats.blowouts,
           blowout_rate: matchesPlayed > 0 ? (stats.blowouts / matchesPlayed) * 100 : 0,
-          player: member.player,
+          player: playerData,
         };
-      });
+      }) as LeagueRanking[];
 
       combinedRankings.sort((a, b) => {
         if (b.points !== a.points) return b.points - a.points;
         if (b.wins !== a.wins) return b.wins - a.wins;
-        return a.player?.full_name?.localeCompare(b.player?.full_name || '') || 0;
+        const aName = (a.player as any)?.full_name || '';
+        const bName = (b.player as any)?.full_name || '';
+        return aName.localeCompare(bName);
       });
 
       setLeagueRankings(combinedRankings);
@@ -2132,11 +2144,11 @@ const shouldShowEventLists = (league: League): boolean => {
                                 <div className="bg-teal-100 rounded-lg p-3 text-sm text-teal-800">
                                   <p className="font-medium mb-1">Previa da pontuacao:</p>
                                   <p>Presenca: +2,5 pts</p>
-                                  {(myLastEventAttendance?.status === 'play_and_bbq' || myLastEventAttendance?.status === 'bbq_only') && <p>Churras: +2,5 pts</p>}
+                                  {myLastEventAttendance?.status === 'play_and_bbq' && <p>Churras: +2,5 pts</p>}
                                   {scoringVictories > 0 && <p>Vitorias: +{scoringVictories * 2} pts</p>}
                                   {hasBlowouts && scoringBlowouts > 0 && <p className="text-red-700">Pneus: -{scoringBlowouts * 2} pts</p>}
                                   <p className="font-bold mt-1 pt-1 border-t border-teal-200">
-                                    Total: {(2.5 + ((myLastEventAttendance?.status === 'play_and_bbq' || myLastEventAttendance?.status === 'bbq_only') ? 2.5 : 0) + (scoringVictories * 2) + ((hasBlowouts ? scoringBlowouts : 0) * -2)).toFixed(1)} pts
+                                    Total: {(2.5 + (myLastEventAttendance?.status === 'play_and_bbq' ? 2.5 : 0) + (scoringVictories * 2) + ((hasBlowouts ? scoringBlowouts : 0) * -2)).toFixed(1)} pts
                                   </p>
                                 </div>
                               </div>
@@ -2390,10 +2402,10 @@ const shouldShowEventLists = (league: League): boolean => {
                                               </div>
                                             )}
                                             {attendanceStatus === 'declined' && (
-                                              <X className="w-3.5 h-3.5 text-red-600" title="Nao vai participar" />
+                                              <X className="w-3.5 h-3.5 text-red-600" aria-label="Nao vai participar" />
                                             )}
                                             {(attendanceStatus === 'no_response' || !attendanceStatus) && (
-                                              <HelpCircle className="w-3.5 h-3.5 text-gray-400" title="Ainda nao respondeu" />
+                                              <HelpCircle className="w-3.5 h-3.5 text-gray-400" aria-label="Ainda nao respondeu" />
                                             )}
                                           </div>
                                         )}
@@ -2450,6 +2462,133 @@ const shouldShowEventLists = (league: League): boolean => {
                           </div>
                         </>
                       )}
+                    </div>
+                  )}
+
+                  {selectedLeague.format === 'weekly' && shouldShowAttendanceCard(selectedLeague) && (
+                    <div className="bg-white border-2 border-gray-200 rounded-xl p-6 mt-6">
+                      <div className="flex items-center gap-3 mb-4">
+                        <CalendarCheck className="w-6 h-6 text-blue-600" />
+                        <h3 className="text-xl font-bold text-gray-900">
+                          Lista de Presença
+                        </h3>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Confirmações para {getDayName(selectedLeague.weekly_day || 0)}, {getNextWeeklyEventDate(selectedLeague)?.toLocaleDateString('pt-BR')}
+                        {selectedLeague.weekly_time && ` às ${selectedLeague.weekly_time.slice(0, 5)}`}
+                      </p>
+
+                      <div className="space-y-3">
+                        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-3 h-3 rounded-full bg-gradient-to-br from-yellow-300 to-yellow-500 border border-yellow-600"></div>
+                            <p className="font-semibold text-emerald-900 text-sm">
+                              Jogo ({Object.entries(allAttendances).filter(([_, att]) => att.status === 'confirmed' || att.status === 'play_and_bbq').length})
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {Object.entries(allAttendances)
+                              .filter(([_, att]) => att.status === 'confirmed' || att.status === 'play_and_bbq')
+                              .map(([playerId]) => {
+                                const member = leagueMembers.find(m => m.player_id === playerId);
+                                return member ? (
+                                  <span key={playerId} className="bg-white px-3 py-1 rounded-full text-sm text-gray-700 border border-emerald-200">
+                                    {member.player.full_name}
+                                  </span>
+                                ) : null;
+                              })}
+                            {Object.entries(allAttendances).filter(([_, att]) => att.status === 'confirmed' || att.status === 'play_and_bbq').length === 0 && (
+                              <span className="text-sm text-gray-500 italic">Ninguém confirmou ainda</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Beef className="w-3.5 h-3.5 text-amber-600" />
+                            <p className="font-semibold text-amber-900 text-sm">
+                              Churrasco ({Object.entries(allAttendances).filter(([_, att]) => att.status === 'bbq_only' || att.status === 'play_and_bbq').length})
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {Object.entries(allAttendances)
+                              .filter(([_, att]) => att.status === 'bbq_only' || att.status === 'play_and_bbq')
+                              .map(([playerId]) => {
+                                const member = leagueMembers.find(m => m.player_id === playerId);
+                                return member ? (
+                                  <span key={playerId} className="bg-white px-3 py-1 rounded-full text-sm text-gray-700 border border-amber-200">
+                                    {member.player.full_name}
+                                  </span>
+                                ) : null;
+                              })}
+                            {Object.entries(allAttendances).filter(([_, att]) => att.status === 'bbq_only' || att.status === 'play_and_bbq').length === 0 && (
+                              <span className="text-sm text-gray-500 italic">Ninguém confirmou ainda</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <X className="w-4 h-4 text-red-600" />
+                            <p className="font-semibold text-red-900 text-sm">
+                              Não vai participar ({Object.entries(allAttendances).filter(([_, att]) => att.status === 'declined').length})
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {Object.entries(allAttendances)
+                              .filter(([_, att]) => att.status === 'declined')
+                              .map(([playerId]) => {
+                                const member = leagueMembers.find(m => m.player_id === playerId);
+                                return member ? (
+                                  <span key={playerId} className="bg-white px-3 py-1 rounded-full text-sm text-gray-700 border border-red-200">
+                                    {member.player.full_name}
+                                  </span>
+                                ) : null;
+                              })}
+                            {Object.entries(allAttendances).filter(([_, att]) => att.status === 'declined').length === 0 && (
+                              <span className="text-sm text-gray-500 italic">Ninguém declinou ainda</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <HelpCircle className="w-4 h-4 text-gray-400" />
+                            <p className="font-semibold text-gray-700 text-sm">
+                              Não respondeu ({leagueMembers.filter(m => !allAttendances[m.player_id]).length})
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {leagueMembers
+                              .filter(m => !allAttendances[m.player_id])
+                              .map((member) => (
+                                <span key={member.player_id} className="bg-white px-3 py-1 rounded-full text-sm text-gray-500 border border-gray-300">
+                                  {member.player.full_name}
+                                </span>
+                              ))}
+                            {leagueMembers.filter(m => !allAttendances[m.player_id]).length === 0 && (
+                              <span className="text-sm text-gray-500 italic">Todos responderam</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div className="text-center">
+                            <p className="text-2xl font-bold text-emerald-600">
+                              {Object.entries(allAttendances).filter(([_, att]) => att.status === 'confirmed' || att.status === 'play_and_bbq').length}
+                            </p>
+                            <p className="text-gray-600">Jogadores confirmados</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-2xl font-bold text-amber-600">
+                              {Object.entries(allAttendances).filter(([_, att]) => att.status === 'bbq_only' || att.status === 'play_and_bbq').length}
+                            </p>
+                            <p className="text-gray-600">No churrasco</p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
